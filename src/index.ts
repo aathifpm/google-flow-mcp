@@ -6,7 +6,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { getFlowConfig, setFlowMode } from "./config.js";
+import { getFlowConfig, setFlowMode, setOutputDir } from "./config.js";
 import {
   generateVideoWithApi,
   checkVideoOperationWithApi,
@@ -39,7 +39,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "flow_generate_video",
         description:
-          "Generate cinematic videos using Google Flow / Veo 3.1. Supports camera motion directives (dolly, pan, tilt, crane, orbit), aspect ratios, starting keyframes, and output file saving. Automatically routes to Direct API or Web Studio based on active toggle.",
+          "Generate cinematic videos using Google Flow / Veo 3.1. Supports camera motion directives (dolly, pan, tilt, crane, orbit), aspect ratios, starting keyframes, and automatic local file saving. In Web mode, automatically detects completed generation in flow.google and downloads the resulting MP4.",
         inputSchema: {
           type: "object",
           properties: {
@@ -94,7 +94,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             wait_for_completion: {
               type: "boolean",
               default: true,
-              description: "Whether to wait and poll until video rendering completes.",
+              description: "Whether to wait and poll until video rendering completes and file is saved.",
             },
           },
           required: ["prompt"],
@@ -103,7 +103,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "flow_generate_image",
         description:
-          "Generate high-fidelity images using Imagen 3 / Google Flow. Supports custom aspect ratios and direct disk saving.",
+          "Generate high-fidelity images using Imagen 3 or Google Flow. Automatically downloads and saves images to disk in both API and Web modes.",
         inputSchema: {
           type: "object",
           properties: {
@@ -171,9 +171,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "flow_set_output_dir",
+        description:
+          "Set the default output directory where generated videos and images will be saved.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            output_dir: {
+              type: "string",
+              description: "Folder path where generated media files should be saved by default.",
+            },
+          },
+          required: ["output_dir"],
+        },
+      },
+      {
         name: "flow_get_status",
         description:
-          "Check current Google Flow MCP status, active mode, API key availability, and Chrome connection status.",
+          "Check current Google Flow MCP status, active mode, API key availability, default output folder, and Chrome connection status.",
         inputSchema: {
           type: "object",
           properties: {},
@@ -202,6 +217,27 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                   status: "success",
                   activeMode: updated,
                   message: `Google Flow MCP mode is now set to [${updated.toUpperCase()}].`,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      case "flow_set_output_dir": {
+        const dir = String(args?.output_dir || "");
+        const resolved = setOutputDir(dir);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  status: "success",
+                  outputDirectory: resolved,
+                  message: `Default output directory updated to: ${resolved}`,
                 },
                 null,
                 2

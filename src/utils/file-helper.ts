@@ -1,12 +1,13 @@
 import * as fs from "fs";
 import * as path from "path";
 import { logger } from "./logger.js";
+import { getDefaultOutputDir } from "../config.js";
 
 /**
  * Ensures the target directory exists and returns an absolute file path.
  */
 export function ensureOutputDir(customPath?: string, defaultFilename: string = "output.bin"): string {
-  const defaultDir = path.resolve(process.cwd(), "flow-outputs");
+  const defaultDir = getDefaultOutputDir();
   if (!fs.existsSync(defaultDir)) {
     fs.mkdirSync(defaultDir, { recursive: true });
   }
